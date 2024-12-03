@@ -1,4 +1,4 @@
-defmodule WeeJobby.Jobby do
+defmodule WeeJobby.Job do
   use GenServer
   require Logger
   defstruct [:work, :id, :max_retries, retries: 0, status: "new"]
@@ -8,7 +8,7 @@ defmodule WeeJobby.Jobby do
     id = Keyword.get(args, :id, random_job_id())
     max_retries = Keyword.get(args, :max_retries, 3)
 
-    state = %WeeJobby.Jobby{id: id, work: work, max_retries: max_retries}
+    state = %WeeJobby.Job{id: id, work: work, max_retries: max_retries}
     {:ok, state, {:continue, :run}}
   end
 
@@ -30,20 +30,20 @@ defmodule WeeJobby.Jobby do
 
   defp handle_job_result({:ok, _data}, state) do
     Logger.info("Job completed #{state.id}")
-    %WeeJobby.Jobby{state | status: "done"}
+    %WeeJobby.Job{state | status: "done"}
   end
 
   defp handle_job_result(:error, %{status: "new"} = state) do
     Logger.warn("Job errored #{state.id}")
-    %WeeJobby.Jobby{state | status: "errored"}
+    %WeeJobby.Job{state | status: "errored"}
   end
 
   defp handle_job_result(:error, %{status: "errored"} = state) do
     Logger.warn("Job retry failed #{state.id}")
-    new_state = %WeeJobby.Jobby{state | retries: state.retries + 1}
+    new_state = %WeeJobby.Job{state | retries: state.retries + 1}
 
     if new_state.retries == state.max_retries do
-      %WeeJobby.Jobby{state | status: "failed"}
+      %WeeJobby.Job{state | status: "failed"}
     else
       new_state
     end
